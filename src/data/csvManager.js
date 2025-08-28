@@ -109,24 +109,30 @@ class CSVManager {
   }
 
   async readJobs() {
-    await this.ensureFileExists();
-    
-    return new Promise((resolve, reject) => {
-      const jobs = [];
-      const fs = require('fs');
+    try {
+      await this.ensureFileExists();
       
-      fs.createReadStream(this.filePath)
-        .pipe(csv())
-        .on('data', (data) => {
-          // Convert skills back to array
-          if (data.skills) {
-            data.skills = data.skills.split(';').filter(skill => skill.trim());
-          }
-          jobs.push(data);
-        })
-        .on('end', () => resolve(jobs))
-        .on('error', reject);
-    });
+      return new Promise((resolve, reject) => {
+        const jobs = [];
+        const fs = require('fs');
+        
+        fs.createReadStream(this.filePath)
+          .pipe(csv())
+          .on('data', (data) => {
+            // Convert skills back to array
+            if (data.skills) {
+              data.skills = data.skills.split(';').filter(skill => skill.trim());
+            }
+            jobs.push(data);
+          })
+          .on('end', () => resolve(jobs))
+          .on('error', reject);
+      });
+    } catch (error) {
+      // If CSV doesn't exist or can't be read, return sample data
+      const { sampleJobs } = require('./sampleData');
+      return sampleJobs;
+    }
   }
 
   async getJobStats() {

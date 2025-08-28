@@ -67,8 +67,11 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`JobTrend AI Dashboard running at http://localhost:${port}`);
-});
+// For Vercel serverless deployment
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`JobTrend AI Dashboard running at http://localhost:${port}`);
+  });
+}
 
 module.exports = app;
