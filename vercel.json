@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/dashboard/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "src/dashboard/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "src/dashboard/server.js"
+    }
+  ],
+  "env": {
+    "ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "SCRAPE_INTERVAL_HOURS": "24",
+    "MAX_PAGES_PER_SITE": "5",
+    "TARGET_ROLES": "marketing,startup,growth,product management,business development",
+    "DASHBOARD_PORT": "3000"
+  },
+  "functions": {
+    "src/dashboard/server.js": {
+      "maxDuration": 30
+    }
+  }
+}

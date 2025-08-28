@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobTrend AI - Job Market Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: #1d1d1f; font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { color: #86868b; font-size: 1.1rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .card h3 { color: #1d1d1f; margin-bottom: 16px; font-size: 1.2rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #007AFF; margin-bottom: 8px; }
+        .stat-label { color: #86868b; font-size: 0.9rem; }
+        .chart-container { position: relative; height: 300px; }
+        .skills-list { list-style: none; }
+        .skills-list li { display: flex; justify-content: between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
+        .skills-list li:last-child { border-bottom: none; }
+        .skill-name { font-weight: 500; }
+        .skill-count { background: #007AFF; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: auto; }
+        .loading { text-align: center; color: #86868b; padding: 40px; }
+        .refresh-btn { background: #007AFF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 1rem; margin: 20px auto; display: block; }
+        .refresh-btn:hover { background: #0056CC; }
+        .insights { background: #f8f9fa; border-left: 4px solid #007AFF; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .last-updated { text-align: center; color: #86868b; font-size: 0.9rem; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>JobTrend AI</h1>
+            <p>Real-time job market analysis for marketing, startup & growth roles</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Total Jobs Tracked</h3>
+                <div class="stat-value" id="totalJobs">-</div>
+                <div class="stat-label">Across all sources</div>
+            </div>
+            
+            <div class="card">
+                <h3>New Jobs Today</h3>
+                <div class="stat-value" id="recentJobs">-</div>
+                <div class="stat-label">Last 24 hours</div>
+            </div>
+            
+            <div class="card">
+                <h3>Top Source</h3>
+                <div class="stat-value" id="topSource">-</div>
+                <div class="stat-label">Most active platform</div>
+            </div>
+            
+            <div class="card">
+                <h3>Growth Trend</h3>
+                <div class="stat-value" id="growthTrend">-</div>
+                <div class="stat-label">7-day prediction</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Job Sources Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="sourcesChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Job Volume Trend</h3>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Top Skills in Demand</h3>
+                <ul class="skills-list" id="skillsList">
+                    <li class="loading">Loading skills data...</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h3>Top Companies Hiring</h3>
+                <ul class="skills-list" id="companiesList">
+                    <li class="loading">Loading companies data...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card insights" id="aiInsights">
+            <h3>AI-Generated Market Insights</h3>
+            <p class="loading">Generating insights from Claude AI...</p>
+        </div>
+
+        <button class="refresh-btn" onclick="loadDashboard()">Refresh Data</button>
+        <div class="last-updated" id="lastUpdated"></div>
+    </div>
+
+    <script>
+        let sourcesChart, trendChart;
+
+        async function loadDashboard() {
+            try {
+                document.getElementById('lastUpdated').textContent = 'Loading...';
+                
+                // Load basic stats
+                const statsResponse = await fetch('/api/stats');
+                const stats = await statsResponse.json();
+                
+                document.getElementById('totalJobs').textContent = stats.total_jobs.toLocaleString();
+                document.getElementById('recentJobs').textContent = stats.recent_jobs.toLocaleString();
+                
+                // Top source
+                const topSource = Object.entries(stats.sources).sort((a,b) => b[1] - a[1])[0];
+                document.getElementById('topSource').textContent = topSource ? topSource[0] : 'N/A';
+                
+                // Load trends
+                const trendsResponse = await fetch('/api/trends');
+                const trends = await trendsResponse.json();
+                
+                document.getElementById('growthTrend').textContent = trends.prediction ? `+${trends.prediction.toFixed(0)}%` : 'N/A';
+                
+                // Update charts
+                updateSourcesChart(stats.sources);
+                updateTrendChart(trends.daily_counts || []);
+                
+                // Load skills
+                const skillsResponse = await fetch('/api/skills');
+                const skills = await skillsResponse.json();
+                updateSkillsList(skills.top_skills || []);
+                
+                // Load companies
+                updateCompaniesList(Object.entries(stats.companies).sort((a,b) => b[1] - a[1]).slice(0, 10));
+                
+                // Load AI insights
+                const insightsResponse = await fetch('/api/insights');
+                const insights = await insightsResponse.json();
+                document.getElementById('aiInsights').innerHTML = `
+                    <h3>AI-Generated Market Insights</h3>
+                    <p>${insights.summary || 'No insights available yet.'}</p>
+                `;
+                
+                document.getElementById('lastUpdated').textContent = `Last updated: ${new Date().toLocaleString()}`;
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('lastUpdated').textContent = 'Error loading data';
+            }
+        }
+
+        function updateSourcesChart(sources) {
+            const ctx = document.getElementById('sourcesChart').getContext('2d');
+            
+            if (sourcesChart) sourcesChart.destroy();
+            
+            sourcesChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sources),
+                    datasets: [{
+                        data: Object.values(sources),
+                        backgroundColor: ['#007AFF', '#FF3B30', '#34C759', '#FF9500', '#AF52DE']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function updateTrendChart(dailyCounts) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (trendChart) trendChart.destroy();
+            
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dailyCounts.map(d => new Date(d.date).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Jobs Posted',
+                        data: dailyCounts.map(d => d.count),
+                        borderColor: '#007AFF',
+                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function updateSkillsList(skills) {
+            const skillsList = document.getElementById('skillsList');
+            skillsList.innerHTML = skills.length ? 
+                skills.map(skill => `
+                    <li>
+                        <span class="skill-name">${skill.name}</span>
+                        <span class="skill-count">${skill.count}</span>
+                    </li>
+                `).join('') :
+                '<li>No skills data available</li>';
+        }
+
+        function updateCompaniesList(companies) {
+            const companiesList = document.getElementById('companiesList');
+            companiesList.innerHTML = companies.length ?
+                companies.map(([name, count]) => `
+                    <li>
+                        <span class="skill-name">${name}</span>
+                        <span class="skill-count">${count}</span>
+                    </li>
+                `).join('') :
+                '<li>No companies data available</li>';
+        }
+
+        // Load dashboard on page load
+        loadDashboard();
+        
+        // Auto-refresh every 5 minutes
+        setInterval(loadDashboard, 300000);
+    </script>
+</body>
+</html>

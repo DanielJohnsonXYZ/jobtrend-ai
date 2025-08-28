@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.log
+data/jobs.csv
+screenshots/
+.DS_Store
