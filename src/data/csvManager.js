@@ -144,17 +144,27 @@ class CSVManager {
       companies: {},
       locations: {},
       recent_jobs: jobs.filter(job => {
-        const jobDate = new Date(job.scraped_date);
+        const jobDate = new Date(job['Scraped Date'] || job.scraped_date);
         const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         return jobDate > dayAgo;
       }).length
     };
 
-    // Count by source
+    // Count by source, handling both CSV headers and object properties
     jobs.forEach(job => {
-      stats.sources[job.source] = (stats.sources[job.source] || 0) + 1;
-      stats.companies[job.company] = (stats.companies[job.company] || 0) + 1;
-      stats.locations[job.location] = (stats.locations[job.location] || 0) + 1;
+      const source = job.Source || job.source || 'Unknown';
+      const company = job.Company || job.company || 'Unknown';
+      const location = job.Location || job.location || 'Unknown';
+      
+      if (source && source !== 'Unknown') {
+        stats.sources[source] = (stats.sources[source] || 0) + 1;
+      }
+      if (company && company !== 'Unknown') {
+        stats.companies[company] = (stats.companies[company] || 0) + 1;
+      }
+      if (location && location !== 'Unknown') {
+        stats.locations[location] = (stats.locations[location] || 0) + 1;
+      }
     });
 
     return stats;

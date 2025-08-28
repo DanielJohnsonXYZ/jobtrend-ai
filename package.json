@@ -6,9 +6,12 @@
   "scripts": {
     "start": "node src/dashboard/server.js",
     "dev": "nodemon src/dashboard/server.js",
-    "scrape": "node src/scraper/index.js",
+    "scrape": "node scripts/runScraper.js",
+    "scrape-auto": "node scripts/setupCron.js",
+    "scrape-now": "node scripts/setupCron.js --run-now",
     "dashboard": "node src/dashboard/server.js",
     "build": "echo 'Build completed'",
+    "generate-data": "node scripts/generateRealData.js",
     "local": "node src/index.js"
   },
   "dependencies": {

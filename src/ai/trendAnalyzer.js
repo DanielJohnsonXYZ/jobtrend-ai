@@ -78,22 +78,36 @@ class TrendAnalyzer {
       'growth hacking', 'seo', 'social media', 'content marketing', 'digital marketing',
       'product management', 'agile', 'scrum', 'leadership', 'strategy', 'communication',
       'project management', 'data analysis', 'excel', 'powerpoint', 'salesforce',
-      'hubspot', 'google analytics', 'facebook ads', 'google ads', 'email marketing'
+      'hubspot', 'google analytics', 'facebook ads', 'google ads', 'email marketing',
+      'a/b testing', 'experimentation', 'go-to-market', 'positioning', 'automation'
     ];
 
     jobs.forEach(job => {
-      const jobText = `${job.title} ${job.company}`.toLowerCase();
+      // Handle both CSV format (Title, Company) and object format (title, company)
+      const title = job.Title || job.title || '';
+      const company = job.Company || job.company || '';
+      const jobText = `${title} ${company}`.toLowerCase();
       
-      // Extract skills from job title and description
+      // Extract skills from job title and company
       commonSkills.forEach(skill => {
         if (jobText.includes(skill.toLowerCase())) {
           skillCounts[skill] = (skillCounts[skill] || 0) + 1;
         }
       });
 
-      // Also check explicit skills array if available
-      if (Array.isArray(job.skills)) {
-        job.skills.forEach(skill => {
+      // Check explicit skills from CSV (semicolon-separated) or array
+      const skillsData = job.Skills || job.skills;
+      if (skillsData) {
+        let skillsArray = [];
+        
+        if (typeof skillsData === 'string') {
+          // CSV format: semicolon-separated
+          skillsArray = skillsData.split(';').map(s => s.trim());
+        } else if (Array.isArray(skillsData)) {
+          skillsArray = skillsData;
+        }
+        
+        skillsArray.forEach(skill => {
           const cleanSkill = skill.toLowerCase().trim();
           if (cleanSkill.length > 2) {
             skillCounts[cleanSkill] = (skillCounts[cleanSkill] || 0) + 1;
@@ -152,9 +166,17 @@ class TrendAnalyzer {
   }
 
   async generateInsights(jobs) {
-    if (!this.anthropic || !jobs || jobs.length === 0) {
+    if (!this.anthropic) {
       return {
-        summary: 'AI insights are not available. Please configure your ANTHROPIC_API_KEY.',
+        summary: 'AI insights require Claude API configuration. Add your ANTHROPIC_API_KEY to enable market analysis.',
+        trends: [],
+        recommendations: []
+      };
+    }
+    
+    if (!jobs || jobs.length === 0) {
+      return {
+        summary: 'No job data available for analysis. Run the scraper to collect market data first.',
         trends: [],
         recommendations: []
       };
