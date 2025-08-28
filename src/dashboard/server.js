@@ -26,6 +26,29 @@ try {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
+// Helper function to calculate stats from job data
+function calculateStats(jobs) {
+  const stats = {
+    total_jobs: jobs.length,
+    sources: {},
+    companies: {},
+    locations: {},
+    recent_jobs: jobs.filter(job => {
+      const jobDate = new Date(job.scraped_date);
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      return jobDate > dayAgo;
+    }).length
+  };
+
+  jobs.forEach(job => {
+    stats.sources[job.source] = (stats.sources[job.source] || 0) + 1;
+    stats.companies[job.company] = (stats.companies[job.company] || 0) + 1;
+    stats.locations[job.location] = (stats.locations[job.location] || 0) + 1;
+  });
+
+  return stats;
+}
+
 // API Routes
 app.get('/api/stats', async (req, res) => {
   try {
@@ -33,9 +56,15 @@ app.get('/api/stats', async (req, res) => {
       const stats = await csvManager.getJobStats();
       res.json(stats);
     } else {
-      // Use sample data when csvManager is not available
-      const { sampleStats } = require('../data/sampleData');
-      res.json(sampleStats);
+      // Use real job data from JSON file
+      try {
+        const realJobsData = require('../../public/jobs-data.json');
+        const stats = calculateStats(realJobsData);
+        res.json(stats);
+      } catch {
+        const { sampleStats } = require('../data/sampleData');
+        res.json(sampleStats);
+      }
     }
   } catch (error) {
     // Fallback to sample data
@@ -55,8 +84,13 @@ app.get('/api/jobs', async (req, res) => {
       const jobs = await csvManager.readJobs();
       res.json(jobs.slice(-limit).reverse()); // Most recent first
     } else {
-      const { sampleJobs } = require('../data/sampleData');
-      res.json(sampleJobs.slice(-limit).reverse());
+      try {
+        const realJobsData = require('../../public/jobs-data.json');
+        res.json(realJobsData.slice(-limit).reverse());
+      } catch {
+        const { sampleJobs } = require('../data/sampleData');
+        res.json(sampleJobs.slice(-limit).reverse());
+      }
     }
   } catch (error) {
     try {
