@@ -12,6 +12,8 @@
     "dashboard": "node src/dashboard/server.js",
     "build": "echo 'Build completed'",
     "generate-data": "node scripts/generateRealData.js",
+    "monitor": "node scripts/monitorScraping.js",
+    "setup-local-cron": "./scripts/setupLocalCron.sh",
     "local": "node src/index.js"
   },
   "dependencies": {

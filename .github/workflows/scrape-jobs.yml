@@ -1,0 +1,54 @@
+name: Automated Job Scraping
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC (adjust for your timezone)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  scrape-jobs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run job scraping
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        MAX_PAGES_PER_SITE: 2
+        TARGET_ROLES: marketing,growth,product management,business development
+      run: |
+        echo "🚀 Starting automated job scraping..."
+        npm run scrape
+        
+    - name: Upload job data
+      uses: actions/upload-artifact@v4
+      with:
+        name: job-data-${{ github.run_number }}
+        path: data/jobs.csv
+        retention-days: 30
+        
+    - name: Commit updated data (if any)
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        if [ -f data/jobs.csv ]; then
+          git add data/jobs.csv
+          git diff --staged --quiet || git commit -m "🤖 Auto-update: Job data $(date '+%Y-%m-%d %H:%M')"
+          git push
+        else
+          echo "No data file to commit"
+        fi
