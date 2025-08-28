@@ -2,6 +2,8 @@
 
 JobTrend AI is an automated job market analysis tool that crawls LinkedIn, Indeed, and Glassdoor for marketing, startup, and growth roles globally. It extracts job postings, analyzes trends, and provides AI-powered insights using Claude API.
 
+🚀 **Live Demo**: [View Dashboard](https://jobtrend-ai-git-main-daniel-wescalestarts-projects.vercel.app)
+
 ## Features
 
 🔍 **Automated Job Scraping**
